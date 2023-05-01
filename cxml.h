@@ -3,22 +3,22 @@
 
 
 typedef struct cXmlAttr{
-	struct cXmlAttr *next;	//ÏÂÒ»¸öÊôĞÔ
-	char *name;				//ÊôĞÔÃû
-	char *val;				//ÊôĞÔÖµ
+	struct cXmlAttr *next;	//ä¸‹ä¸€ä¸ªå±æ€§
+	char *name;				//å±æ€§å
+	char *val;				//å±æ€§å€¼
 } cXmlAttr;
 
 typedef struct cXml{
-	struct cXml *next;	//ÏÂÒ»¸ö½Úµã
-	struct cXml *child;	//×Ó½Úµã
-	char *name;			//xmlÔªËØÃû
-	char *val;			//xmlÔªËØÖµ
-	cXmlAttr *attr;		//xmlÔªËØÊôĞÔ
-} cXml;					//Ò»¸öxmlÔªËØ
+	struct cXml *next;	//ä¸‹ä¸€ä¸ªèŠ‚ç‚¹
+	struct cXml *child;	//å­èŠ‚ç‚¹
+	char *name;			//xmlå…ƒç´ å
+	char *val;			//xmlå…ƒç´ å€¼,å¯èƒ½ä¸ºNULL
+	cXmlAttr *attr;		//xmlå…ƒç´ å±æ€§
+} cXml;					//ä¸€ä¸ªxmlå…ƒç´ 
 
 cXml *cXmlParse(const char *str);
 void cXmlDelete(cXml *node);
-void cXmlPrint(cXml *node);
+void cXmlPrint(cXml *node, int depth);
 cXml *cXmlGetItem(cXml *node, char *name);
 cXml *cXmlGetNextSameItem(cXml *root);
 char *cXmlGetAttr(cXml *root, char *name);

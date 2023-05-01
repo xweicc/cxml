@@ -125,14 +125,14 @@ static const char *cXmlParseNode(cXml *item, const char *str)
 	if(!item->name) return NULL;
 	strncpy(item->name, start, len);
 
-	if(*str==' '){
+	if(*str==' ' || *str=='\n'){
 		cXmlAttr *attr=NULL;
 		attr=(cXmlAttr *)cXmlAttrNew();
 		if(!attr) return NULL;
 		item->attr=attr;
 		str=cXmlParseAttr(attr,str);
 		if(!str || !*str) return NULL;
-		while(*str==' '){
+		while(*str==' ' || *str=='\n'){
  			attr->next=(cXmlAttr *)cXmlAttrNew();
 			if(!attr->next) return NULL;
 			str=cXmlParseAttr(attr->next,str);
@@ -149,7 +149,7 @@ static const char *cXmlParseNode(cXml *item, const char *str)
 	str++;
 	str=skipSpacing(str);
 	
-	if(*str=='<'){
+	if(*str=='<' && *(str+1)!='/'){
 		cXml *node=cXmlNew();
 		if(!node) return NULL;
 		item->child=node;
@@ -169,14 +169,19 @@ static const char *cXmlParseNode(cXml *item, const char *str)
 		str+=strlen(item->name);
 		str++;
 		return skipSpacing(str);
-	}else{
+	}
+    else{
 		start=str;
 		end=strstr(str,"</");
 		if(!end) return NULL;
 		len=end-start;
-		item->val=cXmlNewStr(len);
-		if(!item->val)return NULL;
-		strncpy(item->val, start, len);
+        if(len){
+            item->val=cXmlNewStr(len);
+            if(!item->val)return NULL;
+            strncpy(item->val, start, len);
+        }else{
+            item->val=NULL;
+        }
 		str=end+2;
 		if(strncmp(str, item->name, strlen(item->name))) return NULL;
 		str+=strlen(item->name);
@@ -200,7 +205,7 @@ static void cXmlDelAttr(cXmlAttr *attr)
 	cXmlDelAttr(next);
 }
 
-/*ÊÍ·ÅXML½âÎöÊ¹ÓÃµÄÄÚ´æ*/
+/*é‡Šæ”¾XMLè§£æä½¿ç”¨çš„å†…å­˜*/
 void cXmlDelete(cXml *node)
 {
 	cXml *next=NULL;
@@ -217,7 +222,7 @@ void cXmlDelete(cXml *node)
 	cXmlDelete(child);
 }
 
-/*½âÎöXMLÎÄ±¾,Ê§°Ü·µ»ØNULL*/
+/*è§£æXMLæ–‡æœ¬,å¤±è´¥è¿”å›NULL*/
 cXml *cXmlParse(const char *str)
 {
 	cXml *root=cXmlNew();
@@ -238,24 +243,31 @@ cXml *cXmlParse(const char *str)
 	return root;
 }
 
-static void cXmlAttrPrint(cXmlAttr *node)
+char *depthSpace(int depth)
 {
-	if(!node) return ;
-	if(node->name && node->val) printf("Attr: %s=%s\n",node->name,node->val);
-	if(node->next) cXmlAttrPrint(node->next);
+    char *space="                                                                ";
+
+    return space+strlen(space)-depth;
 }
 
-void cXmlPrint(cXml *node)
+static void cXmlAttrPrint(cXmlAttr *node, int depth)
 {
 	if(!node) return ;
-	if(node->name) printf("Name=%s\n",node->name);
-	if(node->attr) cXmlAttrPrint(node->attr);
-	if(node->val) printf("Value=%s\n",node->val);
-	if(node->child){printf("Child:\n"); cXmlPrint(node->child);}
-	if(node->next){printf("Next:\n"); cXmlPrint(node->next);}
+	if(node->name && node->val) printf("%sAttr: %s=%s\n",depthSpace(depth),node->name,node->val);
+	if(node->next) cXmlAttrPrint(node->next,depth);
 }
 
-/*È¡×Ó½Úµã*/
+void cXmlPrint(cXml *node, int depth)
+{
+	if(!node) return ;
+	if(node->name) printf("%sName=%s\n",depthSpace(depth),node->name);
+	if(node->attr) cXmlAttrPrint(node->attr,depth);
+	if(node->val) printf("%sValue=%s\n",depthSpace(depth),node->val);
+	if(node->child){printf("%sChild:\n",depthSpace(depth)); cXmlPrint(node->child,depth+1);}
+	if(node->next){printf("%sNext:\n",depthSpace(depth)); cXmlPrint(node->next,depth);}
+}
+
+/*å–å­èŠ‚ç‚¹*/
 cXml *cXmlGetItem(cXml *root, char *name)
 {
 	cXml *node=root->child;
@@ -263,7 +275,7 @@ cXml *cXmlGetItem(cXml *root, char *name)
 	return node;
 }
 
-/*È¡ÏÂÒ»¸ö½Úµã,ÇÒnameÏàÍ¬*/
+/*å–ä¸‹ä¸€ä¸ªèŠ‚ç‚¹,ä¸”nameç›¸åŒ*/
 cXml *cXmlGetNextSameItem(cXml *root)
 {
 	cXml *node=root->next;
@@ -273,7 +285,7 @@ cXml *cXmlGetNextSameItem(cXml *root)
 	return NULL;
 }
 
-/*È¡½ÚµãµÄÊôĞÔÖµ*/
+/*å–èŠ‚ç‚¹çš„å±æ€§å€¼*/
 char *cXmlGetAttr(cXml *root, char *name)
 {
 	cXmlAttr *attr=root->attr;

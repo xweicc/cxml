@@ -3,77 +3,95 @@
 */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+
 #include "cxml.h"
 
-int main(void)
+char *Fread(char *path)
 {
-	char *str=\
-	"<bookstore>\
-		<book category=\"CHILDREN\">\
-			<title>Harry Potter</title>\
-			<author>J K. Rowling</author>\
-			<year>2005</year>\
-			<price>29.99</price>\
-		</book>\
-		<book category = \"WEB\">\
-			<title>Learning XML</title>\
-			<author>Erik T. Ray</author>\
-			<year>2003</year>\
-			<price>39.95</price>\
-		</book>\
-	</bookstore>";
+    FILE *fp=NULL;
+    char *buf=NULL;
+    size_t size;
+    
+    fp=fopen(path, "r");
+    if(!fp){
+        printf("fopen %s error:%s\n",path,strerror(errno));
+        return NULL;
+    }
 
-	cXml *root,*book,*title;
-	char *category;
+    if(fseek(fp,0,SEEK_END)){
+        printf("fseek %s error:%s\n",path,strerror(errno));
+        goto out;
+    }
 
-	root=cXmlParse(str);
+    size=ftell(fp);
+    if(size<=0){
+        printf("ftell %s error:%s\n",path,strerror(errno));
+        goto out;
+    }
+
+    if(fseek(fp,0,SEEK_SET)){
+        printf("fseek %s error:%s\n",path,strerror(errno));
+        goto out;
+    }
+
+    buf=malloc(size);
+    if(!buf){
+        printf("malloc %lu error:%s\n",size,strerror(errno));
+        goto out;
+    }
+
+    if(1!=fread(buf,size,1,fp)){
+        printf("fread %s error:%s\n",path,strerror(errno));
+        goto out;
+    }
+
+    fclose(fp);
+    return buf;
+out:    
+    if(fp){
+        fclose(fp);
+    }
+    if(buf){
+        free(buf);
+    }
+    return NULL;
+}
+
+int main(int argc, char **argv)
+{
+	cXml *root=NULL;
+    char *buf=NULL;
+    long size;
+
+    if(argc<2){
+        printf("Usage:\n");
+        printf("\t%s <xmlFile>\n",argv[0]);
+        return -1;
+    }
+
+    buf=Fread(argv[1]);
+    if(!buf){
+        goto out;
+    }
+
+	root=cXmlParse(buf);
 	if(!root){
 		printf("cXmlParse failed\n");
 		return -1;
 	}
 
-	printf("===============cXmlPrint Start====================\n");
-	cXmlPrint(root);
-	printf("===============cXmlPrint End======================\n\n");
-
-	book=cXmlGetItem(root, "book");
-	if(!book){
-		printf("Not find book\n");
-		goto out;
-	}
-	category=cXmlGetAttr(book, "category");
-	if(!category){
-		printf("Not find category\n");
-		goto out;
-	}
-	
-	title=cXmlGetItem(book, "title");
-	if(!title){
-		printf("Not find title\n");
-		goto out;
-	}
-	printf("Book category:%s title:%s\n",category,title->val);
-
-	book=cXmlGetNextSameItem(book);
-	if(!book){
-		printf("Not find Next book\n");
-		goto out;
-	}
-	category=cXmlGetAttr(book, "category");
-	if(!category){
-		printf("Not find category\n");
-		goto out;
-	}
-	
-	title=cXmlGetItem(book, "title");
-	if(!title){
-		printf("Not find title\n");
-		goto out;
-	}
-	printf("Book category:%s title:%s\n",category,title->val);
+    cXmlPrint(root, 0);
 
 out:
-	cXmlDelete(root);
+    if(root){
+        cXmlDelete(root);
+    }
+    if(buf){
+        free(buf);
+    }
 	return 0;
 }
 
